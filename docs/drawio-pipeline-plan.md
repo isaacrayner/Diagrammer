@@ -75,14 +75,27 @@ This is the core of the plan — nothing is thrown away.
 | **`icons/<slug>.svg` + `icons/manifest.json`** | Two uses: (a) the converter **embeds** each service's official SVG into the `.drawio` (`shape=image`); (b) a generated **draw.io shape library** loads the same set into the container so a human can drag *new* official-icon nodes. Icon parity with the D2 path is guaranteed — both read from `icons/`. | Build a library file from them (§4c). |
 | **`styles/azure.d2`** (the visual truth) | Its classes (`sub/rg/vnet/subnet/svc` and flows `ingress/sync/pe/…`) are translated **once** into draw.io style strings. This **style-map** becomes the single visual truth for the draw.io path, mirroring `azure.d2`. | Build the style-map (§4a). |
 | **`templates/target-state.d2`** (titleblock + legend) | The converter reproduces the same title block and full legend in the `.drawio`, so every rule about "a legend for every flow class used" still holds visually. | Converter emits them (§4b). |
-| **`bin/lint.py`** (geometry gate) | Runs unchanged on the **SVG the headless exporter produces** — overlap, crossings, aspect ratio. The quality bar is identical. | **None.** |
+| **`bin/lint.py`** (geometry gate) | Runs on the **SVG the headless exporter produces** — overlap, crossings, aspect ratio. | **Adapter needed** (see caveat below). |
 | **`bin/render.py` / `optimize.py` / `resvg`** | The D2→SVG/PNG render path still exists for a fast, no-human "first look". For the *edited* diagram, headless draw.io export replaces resvg (it rasterises natively, and — unlike resvg — it *can* render a proper diagram). | Kept; new export path added alongside. |
 | **`designs/<customer>/`** | Now holds `x.d2` (semantic seed) **and** `x.drawio` (human-edited truth) **and** `x.png/.svg` (export), all versioned together — the WAF "store sources with the workload" guidance still satisfied. | Convention update only. |
 | **Local / confidential constraint** (killed the SaaS portal) | The hosted container runs with `?offline=1` — cloud storage disabled, stateless, nothing leaves the machine. Headless export is a local container too. | Honoured by design. |
 
-**Net:** the skill, the semantic gate, the geometry gate, and the icon set are all
-reused verbatim. The only genuinely new surface is a **style translation + a
-converter + an icon library** — three deterministic, testable artifacts.
+**Net:** the skill, the semantic gate, and the icon set are reused verbatim. The
+geometry gate is reused in *purpose* but needs a small adapter (below). The
+genuinely new surface is a **style translation + a converter + an icon library** —
+three deterministic, testable artifacts — plus that lint adapter.
+
+> **Correction (verified against the code, not assumed).** `bin/lint.py` reads
+> **D2-specific** SVG markup: it finds connectors by `class="…connection…"`
+> (`lint.py:81`) and edge-labels by `class="…italic…"` (`lint.py:90`), neither of
+> which draw.io emits. On a draw.io-exported SVG it would silently see **zero
+> connectors** and mis-classify labels, so its 0–100 score would be meaningless.
+> The geometry gate therefore does **not** run unchanged on the draw.io path — it
+> needs a **draw.io-SVG adapter**: a rewrite of `lint.py`'s `extract()` to
+> understand draw.io's edge/label markup. Contained (~a day), but real added scope.
+> This became a Phase-3 work item (§8). `contract.py`, by contrast, *does* run
+> unchanged, because the skill still authors D2 — verified: it PASSes on
+> `radical-systems.d2` with 0 errors.
 
 ---
 
@@ -232,9 +245,11 @@ skill emits, with seed layout.
 legend, titleblock, orthogonal edges; `contract.py` passed on the `.d2`.
 
 **Phase 3 — Export + gate (§5B).** `drawio_export.py` around the headless container;
-wire `lint.py`.
-*Done when:* `.drawio` → PNG/SVG headlessly, PNG embeds in the Word doc, `lint.py`
-scores the SVG.
+**add a draw.io-SVG adapter to `lint.py`** (rewrite `extract()` for draw.io's
+edge/label markup — see the correction in §3), then wire it in.
+*Done when:* `.drawio` → PNG/SVG headlessly, PNG embeds in the Word doc, and
+`lint.py` returns a *correct* connector count + score on the draw.io SVG (not the
+zero-connector misread it gives today).
 
 **Phase 4 — Fold into the skill (§7).** Update `skill/SKILL.md` + README.
 *Done when:* the full LLM→D2→drawio→(optional edit)→PNG loop is documented and runs
