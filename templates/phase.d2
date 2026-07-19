@@ -1,0 +1,49 @@
+...@../styles/azure.d2
+# diagram-type: component
+# ─────────────────────────────────────────────────────────────────────────────
+# templates/phase.d2 — starter for one phase of a migration.
+#
+# Copy to designs/<customer>/phases/phase-<n>.d2 and change the import to
+#   ...@../../../styles/azure.d2
+#
+# RULE: keep node IDs identical across phases for every service that persists,
+# so a service sits in the same place in every phase and the migration reads as
+# one story. When a service is replaced (sqlvm -> sqlmi), keep the surrounding
+# IDs stable and swap only the leaf.
+#
+# Anything deferred to a later phase gets { class: future } (greyed, dashed) and
+# a legend entry, so grey is never ambiguous — the reference diagrams greyed out
+# future items with no key, which is the one thing to fix from them.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Plain text, NOT a |md| block: markdown does not survive SVG -> PNG.
+title: "<Customer> — Azure Phase <N>: <what this phase delivers>\nRev 1 · 2026-01-01 · <author>" {
+  near: top-center
+  class: titleblock
+}
+
+legend: Legend {
+  near: bottom-left
+  class: legend
+  direction: right
+  i1.class: legendkey;  i2.class: legendkey
+  s1.class: legendkey;  s2.class: legendkey
+  p1.class: legendkey;  p2.class: legendkey
+  v1.class: legendkey;  v2.class: legendkey
+  i1 -> i2: user / app inflow     { class: ingress }
+  s1 -> s2: internal service call { class: sync }
+  p1 -> p2: private endpoint      { class: pe }
+  v1 -> v2: VNet peering          { class: peering }
+  deferred: deferred to a later phase { class: future }
+}
+
+# ── topology (stable IDs) ────────────────────────────────────────────────────
+# sub_work: "SUBSCRIPTION · <name>" { class: sub
+#   rg_app: "RG · rg-app" { class: rg
+#     vnet: "vnet 10.1.0.0/16" { class: vnet
+#       snet_app: "snet-app 10.1.1.0/24" { class: subnet
+#         app: App Service { class: svc; icon: ./icons/appservice.svg }
+#       }
+#     }
+#   }
+# }

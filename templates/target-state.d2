@@ -1,0 +1,80 @@
+...@../styles/azure.d2
+# diagram-type: component
+# ─────────────────────────────────────────────────────────────────────────────
+# templates/target-state.d2 — starter for a target-state architecture.
+# Copy to designs/<customer>/<customer>.d2 and change the import to
+#   ...@../../styles/azure.d2
+#
+# The diagram-type header above is required (contract R13). Types:
+#   context     workload as a black box plus external actors (no VNet/subnet)
+#   container   hosting models, no subnets
+#   component   named services with official icons  <- the usual ADS deliverable
+#   network     CIDRs, peering, egress paths
+#   resilience  RPO/RTO on the recovery path
+#   identity    identity and access flows
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── metadata (recommended on every diagram: title, revision, date, author) ────
+# Plain text, NOT a |md| block: markdown renders as an HTML foreignObject which
+# resvg cannot rasterise, so a markdown title vanishes from the PNG.
+title: "<Customer> — Azure Target-State Architecture\nRev 1 · 2026-01-01 · <author>" {
+  near: top-center
+  class: titleblock
+}
+
+# ── legend ───────────────────────────────────────────────────────────────────
+# Delete the entries you do not use; the contract requires an entry for every
+# flow class the diagram actually uses. The legendkey class makes the anchor
+# nodes invisible so this reads as a key rather than a little diagram.
+legend: Legend {
+  near: bottom-left
+  class: legend
+  direction: right
+  i1.class: legendkey;  i2.class: legendkey
+  s1.class: legendkey;  s2.class: legendkey
+  d1.class: legendkey;  d2.class: legendkey
+  e1.class: legendkey;  e2.class: legendkey
+  p1.class: legendkey;  p2.class: legendkey
+  v1.class: legendkey;  v2.class: legendkey
+  r1.class: legendkey;  r2.class: legendkey
+  m1.class: legendkey;  m2.class: legendkey
+  i1 -> i2: user / app inflow        { class: ingress }
+  s1 -> s2: internal service call    { class: sync }
+  d1 -> d2: DevOps / CI-CD           { class: devops }
+  e1 -> e2: internet egress          { class: egress }
+  p1 -> p2: private endpoint         { class: pe }
+  v1 -> v2: VNet peering             { class: peering }
+  r1 -> r2: replication              { class: replication }
+  m1 -> m2: management / backup      { class: mgmt }
+}
+
+# ── layout: the four-column house grid (see skill/style-contract.md §7b) ─────
+grid-columns: 4
+grid-gap: 60
+
+actors: "Users & Identity" { class: group
+  grid-rows: 2
+  # users, developers, Entra tenant
+}
+
+sub_lz: "SUBSCRIPTION · Landing Zone" { class: sub
+  grid-rows: 3
+  # edge: Front Door / WAF / AVD control plane / DevOps
+  # rg_hub -> Hub VNet with its subnets side by side (grid-columns)
+  # govern: Defender / Policy / Log Analytics
+}
+
+sub_prod: "SUBSCRIPTION · Production" { class: sub
+  rg_prod: "RG · rg-prod" { class: rg
+    grid-columns: 2          # VNet beside loose resources, not stacked
+    vnet_spoke: "Production Spoke VNet" { class: vnet
+      grid-rows: 5           # subnets as full-width horizontal bands
+      # each subnet: grid-columns: N, one node per real instance
+    }
+  }
+}
+
+right: "PaaS & Operations" { class: group
+  grid-rows: 3
+  # PaaS reached over private endpoints, backup/DR, third parties
+}

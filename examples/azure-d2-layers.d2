@@ -1,0 +1,53 @@
+vars: { d2-config: { layout-engine: elk; theme-id: 0 } }
+direction: right
+
+classes: {
+  sub:    { style: { fill: "#e7edf7"; stroke: "#2f4b7c"; stroke-width: 3; border-radius: 6;  font-size: 16; bold: true } }
+  rg:     { style: { fill: "#eef6fc"; stroke: "#0078d4"; stroke-width: 2; stroke-dash: 4; border-radius: 8; font-size: 13; bold: true } }
+  vnet:   { style: { fill: "#dcecfb"; stroke: "#0e6ba8"; stroke-width: 2; border-radius: 10; font-size: 13; bold: true } }
+  subnet: { style: { fill: "#f6f8fc"; stroke: "#8aa0c0"; stroke-width: 1; border-radius: 10; font-size: 12; bold: true } }
+  svc:    { shape: image; width: 64; height: 64 }
+}
+
+sub_conn: "SUBSCRIPTION  ·  Platform-Connectivity" {
+  class: sub
+  rg_hub: "RG  ·  rg-hub-network" {
+    class: rg
+    hub: "hub-vnet  10.0.0.0/16" {
+      class: vnet
+      s_fw: "AzureFirewallSubnet" { class: subnet; fw: Firewall { class: svc; icon: ./icons/firewall.svg } }
+      s_gw: "GatewaySubnet" { class: subnet; gw: App Gateway { class: svc; icon: ./icons/appgw.svg } }
+    }
+  }
+}
+
+sub_work: "SUBSCRIPTION  ·  Workload-Production" {
+  class: sub
+  rg_app: "RG  ·  rg-app" {
+    class: rg
+    spoke_app: "spoke-vnet  10.1.0.0/16" {
+      class: vnet
+      s_app: "snet-app  10.1.1.0/24" {
+        class: subnet
+        app: App Service { class: svc; icon: ./icons/appservice.svg }
+        func: Function App { class: svc; icon: ./icons/function.svg }
+      }
+    }
+  }
+  rg_data: "RG  ·  rg-data" {
+    class: rg
+    spoke_data: "spoke-vnet-data  10.2.0.0/16" {
+      class: vnet
+      s_data: "snet-data  10.2.1.0/24" {
+        class: subnet
+        sql: SQL MI { class: svc; icon: ./icons/sqlmi.svg }
+        stg: Storage { class: svc; icon: ./icons/storage.svg }
+        kv: Key Vault { class: svc; icon: ./icons/keyvault.svg }
+      }
+    }
+  }
+}
+
+sub_conn.rg_hub.hub -> sub_work.rg_app.spoke_app: peering { style: { stroke: "#2f4b7c"; stroke-width: 2; font-size: 11 } }
+sub_conn.rg_hub.hub -> sub_work.rg_data.spoke_data: peering { style: { stroke: "#2f4b7c"; stroke-width: 2; font-size: 11 } }
+sub_work.rg_app.spoke_app.s_app.app -> sub_work.rg_data.spoke_data.s_data.sql: "TDS · private endpoint" { style: { stroke-dash: 3; font-size: 11 } }

@@ -1,0 +1,62 @@
+vars: { d2-config: { layout-engine: elk; theme-id: 0 } }
+direction: down
+
+classes: {
+  svc: { shape: image; width: 74; height: 74 }
+  zone: {
+    style: { stroke: "#7c8aa5"; stroke-width: 1; fill: "#f6f8fc"; border-radius: 14; font-size: 13; bold: true }
+  }
+}
+
+title: Contoso — Azure Target-State Architecture (PaaS) {
+  near: top-center
+  shape: text
+  style: { font-size: 20; bold: true }
+}
+
+users: Users { class: svc; icon: ./icons/users.svg }
+
+edge: Global Edge {
+  class: zone
+  fd: Front Door { class: svc; icon: ./icons/frontdoor.svg }
+  waf: WAF { class: svc; icon: ./icons/waf.svg }
+  fd -> waf
+}
+
+vnet: "Virtual Network — 10.0.0.0/16" {
+  class: zone
+  snet_fe: "Frontend Subnet · 10.0.1.0/24" {
+    class: zone
+    appgw: App Gateway { class: svc; icon: ./icons/appgw.svg }
+  }
+  snet_app: "Application Subnet · 10.0.2.0/24" {
+    class: zone
+    app: App Service { class: svc; icon: ./icons/appservice.svg }
+    func: Function App { class: svc; icon: ./icons/function.svg }
+    sb: Service Bus { class: svc; icon: ./icons/servicebus.svg }
+  }
+  snet_data: "Data Subnet · 10.0.3.0/24" {
+    class: zone
+    sql: SQL MI { class: svc; icon: ./icons/sqlmi.svg }
+    stg: Storage { class: svc; icon: ./icons/storage.svg }
+    redis: Redis { class: svc; icon: ./icons/redis.svg }
+  }
+  snet_sec: "Shared Services · 10.0.4.0/24" {
+    class: zone
+    kv: Key Vault { class: svc; icon: ./icons/keyvault.svg }
+    fw: Firewall { class: svc; icon: ./icons/firewall.svg }
+  }
+}
+
+mon: Azure Monitor { class: svc; icon: ./icons/monitor.svg }
+
+users -> edge.fd: HTTPS 443 { style.font-size: 11 }
+edge.waf -> vnet.snet_fe.appgw: HTTPS { style.font-size: 11 }
+vnet.snet_fe.appgw -> vnet.snet_app.app: HTTPS { style.font-size: 11 }
+vnet.snet_app.app -> vnet.snet_app.func: invoke { style.font-size: 11 }
+vnet.snet_app.func -> vnet.snet_app.sb: messages { style.font-size: 11 }
+vnet.snet_app.app -> vnet.snet_data.sql: "TDS · private endpoint" { style: { font-size: 11; stroke-dash: 3 } }
+vnet.snet_app.app -> vnet.snet_data.stg: private endpoint { style: { font-size: 11; stroke-dash: 3 } }
+vnet.snet_app.app -> vnet.snet_data.redis: cache { style.font-size: 11 }
+vnet.snet_app.app -> vnet.snet_sec.kv: "secrets · private endpoint" { style: { font-size: 11; stroke-dash: 3 } }
+vnet.snet_sec.fw -> mon: diagnostics { style: { font-size: 11; stroke-dash: 4 } }

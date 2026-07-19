@@ -1,0 +1,192 @@
+...@../../styles/azure.d2
+# diagram-type: component
+# RADical Systems Ltd — Azure target-state architecture.
+# Source: RADical-Systems-ADS-Architectural-Design.md sections 11a, C4 and the
+# target-state service integration map. Subnet prefixes per the Phase 1 design;
+# no address space is invented here.
+#
+# LAYOUT: four columns on a grid, matching the hand-drawn house style —
+#   actors | landing zone | production | PaaS & operations
+# Subnets are full-width horizontal bands inside the production VNet. The grid
+# is what keeps this landscape and aligned; ELK alone stacks it into a column.
+# Render: python bin/optimize.py designs/radical-systems/radical-systems.d2
+
+title: "RADical Systems Ltd — Azure Target-State Architecture (UK South)\nRev 2 · 2026-07-19 · Climb Global Services" {
+  near: top-center
+  class: titleblock
+}
+
+legend: Legend {
+  near: bottom-left
+  class: legend
+  direction: right
+  i1.class: legendkey;  i2.class: legendkey
+  s1.class: legendkey;  s2.class: legendkey
+  d1.class: legendkey;  d2.class: legendkey
+  e1.class: legendkey;  e2.class: legendkey
+  p1.class: legendkey;  p2.class: legendkey
+  v1.class: legendkey;  v2.class: legendkey
+  m1.class: legendkey;  m2.class: legendkey
+  i1 -> i2: user / app inflow        { class: ingress }
+  s1 -> s2: internal service call    { class: sync }
+  d1 -> d2: DevOps / CI-CD           { class: devops }
+  e1 -> e2: internet egress          { class: egress }
+  p1 -> p2: private endpoint         { class: pe }
+  v1 -> v2: VNet peering             { class: peering }
+  m1 -> m2: management / backup      { class: mgmt }
+}
+
+grid-columns: 4
+grid-gap: 60
+
+# ── column 1 · actors and identity ───────────────────────────────────────────
+actors: "Users & Identity" { class: group
+  grid-rows: 3
+  users: "Tenant Users\nB2B guests"     { class: svc; icon: ./icons/users.svg }
+  devs:  "RADical Developers"           { class: svc; icon: ./icons/users.svg }
+  entra: "Microsoft Entra ID\nGoogle OIDC" { class: svc; icon: ./icons/entra.svg }
+}
+
+# ── column 2 · landing zone subscription ─────────────────────────────────────
+sub_lz: "SUBSCRIPTION · Landing Zone" { class: sub
+  grid-rows: 3
+  edge: "Global edge services" { class: group
+    grid-columns: 3
+    fd:     "Front Door Standard\n+ WAF"  { class: svc; icon: ./icons/frontdoor.svg }
+    avd:    "AVD control plane"           { class: svc; icon: ./icons/avd.svg }
+    devops: "Azure DevOps\nPipelines"     { class: svc; icon: ./icons/devops.svg }
+  }
+  rg_hub: "RG · rg-hub" { class: rg
+    vnet_hub: "Hub VNet" { class: vnet
+      grid-columns: 3
+      snet_bastion: "AzureBastionSubnet" { class: subnet
+        bastion: "Azure Bastion" { class: svc; icon: ./icons/bastion.svg }
+      }
+      snet_gw: "GatewaySubnet" { class: subnet
+        vgw: "VNet Gateway" { class: svc; icon: ./icons/vnetgw.svg }
+      }
+      snet_fw: "AzureFirewallSubnet\n(Phase 3)" { class: subnet
+        fw: "Azure Firewall" { class: svc; icon: ./icons/firewall.svg }
+      }
+    }
+  }
+  govern: "Governance & security" { class: group
+    grid-columns: 2
+    defender: "Defender for Cloud" { class: svc; icon: ./icons/defender.svg }
+    policy:   "Azure Policy"       { class: svc; icon: ./icons/policy.svg }
+  }
+}
+
+# ── column 3 · production subscription ───────────────────────────────────────
+sub_prod: "SUBSCRIPTION · Production" { class: sub
+  rg_prod: "RG · rg-prod" { class: rg
+    # side by side, not stacked: stacking made this column so tall that every
+    # other column stretched to match it and filled with dead space
+    grid-columns: 2
+    vnet_spoke: "Production Spoke VNet" { class: vnet
+      grid-rows: 5
+      snet_pres: "Presentation Subnet /26 · AVD host pool" { class: subnet
+        grid-columns: 4
+        sh:   "AVD SH 01\nWin 11 24H2" { class: svc; icon: ./icons/avd.svg }
+        sh2:  "AVD SH 02\nzoned"       { class: svc; icon: ./icons/avd.svg }
+        sh3:  "AVD SH 03\nzoned"       { class: svc; icon: ./icons/avd.svg }
+        sh4:  "AVD SH 04\nzoned"       { class: svc; icon: ./icons/avd.svg }
+      }
+      snet_web: "Web/App Subnet /23 · ACA" { class: subnet
+        grid-columns: 5
+        aca:   "Container Apps\nEnvironment" { class: svc; icon: ./icons/containerapps.svg }
+        smweb: "Spaceman Web"  { class: svc; icon: ./icons/containerapps.svg }
+        smshop:"Spaceman Shop" { class: svc; icon: ./icons/containerapps.svg }
+        smops: "Spaceman Ops"  { class: svc; icon: ./icons/containerapps.svg }
+        smlink:"Spaceman Link" { class: svc; icon: ./icons/containerapps.svg }
+      }
+      snet_mw: "Middleware Subnet /24 · Spaceman Hub" { class: subnet
+        grid-columns: 3
+        hubvm:  "Hub 01\nWindows IaaS" { class: svc; icon: ./icons/vm.svg }
+        hubvm2: "Hub 02\nzoned"        { class: svc; icon: ./icons/vm.svg }
+        hubvm3: "Hub 03\nzoned"        { class: svc; icon: ./icons/vm.svg }
+      }
+      snet_db: "Database Subnet /24 · SQL Anywhere 17" { class: subnet
+        grid-columns: 3
+        sqlvm:  "DB 01\nUbuntu IaaS" { class: svc; icon: ./icons/vm.svg }
+        sqlvm2: "DB 02\nzoned"       { class: svc; icon: ./icons/vm.svg }
+        sqlvm3: "DB 03\nzoned"       { class: svc; icon: ./icons/vm.svg }
+      }
+      # A private endpoint is a NIC in this subnet fronting a PaaS service, so
+      # the endpoints belong here and the services do not. Drawing them this way
+      # is accurate AND keeps the cross-column traffic to a single Private Link
+      # edge instead of five long diagonals.
+      snet_pe: "Private Endpoint Subnet /27" { class: subnet
+        grid-columns: 6
+        pe_acr:  "PE · Registry" { class: svc; icon: ./icons/privateendpoint.svg }
+        pe_kv:   "PE · Key Vault" { class: svc; icon: ./icons/privateendpoint.svg }
+        pe_blob: "PE · Blob"     { class: svc; icon: ./icons/privateendpoint.svg }
+        pe_files:"PE · Files"    { class: svc; icon: ./icons/privateendpoint.svg }
+        pe_cos:  "PE · Cosmos"   { class: svc; icon: ./icons/privateendpoint.svg }
+        pdns:    "Private DNS Zones" { class: svc; icon: ./icons/privatedns.svg }
+      }
+    }
+    natgw: "NAT Gateway · fixed outbound IP" { class: svc; icon: ./icons/natgw.svg }
+  }
+}
+
+# ── column 4 · PaaS over private endpoints, protection, third parties ────────
+right: "PaaS & Operations" { class: group
+  grid-rows: 4
+  paas: "PaaS · via Private Endpoints" { class: group
+    grid-columns: 2
+    acr:    "Container Registry"       { class: svc; icon: ./icons/acr.svg }
+    kv:     "Key Vault"                { class: svc; icon: ./icons/keyvault.svg }
+    blob:   "Blob Storage\n(was AWS S3)" { class: svc; icon: ./icons/storage.svg }
+    files:  "Azure Files\nFSLogix"     { class: svc; icon: ./icons/files.svg }
+    cosmos: "Cosmos DB\nsessions"      { class: svc; icon: ./icons/cosmos.svg }
+  }
+  law:      "Log Analytics\n+ Azure Monitor" { class: svc; icon: ./icons/loganalytics.svg }
+  rsv:      "Recovery Vault\nGRS · ASR to UK West" { class: svc; icon: ./icons/recovery.svg }
+  external: "External Services\nStripe · GoCardless · Graph" { class: svc; icon: ./icons/internet.svg }
+}
+
+# ── inflow ───────────────────────────────────────────────────────────────────
+actors.users -> actors.entra: "authenticate" { class: ingress }
+actors.users -> sub_lz.edge.fd: "HTTPS 443" { class: ingress }
+actors.users -> sub_lz.edge.avd: "Windows App · SSO" { class: ingress }
+sub_lz.edge.fd -> sub_prod.rg_prod.vnet_spoke.snet_web.aca: "HTTPS 443" { class: ingress }
+sub_lz.edge.avd -> sub_prod.rg_prod.vnet_spoke.snet_pres.sh: "session broker" { class: ingress }
+
+# ── internal service calls ───────────────────────────────────────────────────
+sub_prod.rg_prod.vnet_spoke.snet_web.aca -> sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm: "TCP 2638" { class: sync }
+sub_prod.rg_prod.vnet_spoke.snet_pres.sh -> sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm: "TCP 2638" { class: sync }
+sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm -> sub_prod.rg_prod.vnet_spoke.snet_db.sqlvm: "SQL Anywhere" { class: sync }
+
+# ── private endpoints ────────────────────────────────────────────────────────
+# Consumers reach the private endpoint inside the VNet; the endpoint reaches the
+# PaaS service. Drawing it this way is both more accurate than a direct line to
+# the service and much cleaner: five short internal hops plus one fan out of the
+# PE subnet, instead of five long diagonals from three different subnets.
+sub_prod.rg_prod.vnet_spoke.snet_web.aca -> sub_prod.rg_prod.vnet_spoke.snet_pe.pe_blob: "customer files" { class: pe }
+sub_prod.rg_prod.vnet_spoke.snet_web.aca -> sub_prod.rg_prod.vnet_spoke.snet_pe.pe_cos: "TCP 10255" { class: pe }
+sub_prod.rg_prod.vnet_spoke.snet_web.aca -> sub_prod.rg_prod.vnet_spoke.snet_pe.pe_acr: "image pull" { class: pe }
+sub_prod.rg_prod.vnet_spoke.snet_pres.sh -> sub_prod.rg_prod.vnet_spoke.snet_pe.pe_files: "SMB 445" { class: pe }
+sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm -> sub_prod.rg_prod.vnet_spoke.snet_pe.pe_kv: "secrets" { class: pe }
+
+# one Private Link hop out of the VNet, rather than five long diagonals
+sub_prod.rg_prod.vnet_spoke.snet_pe -> right.paas: "Azure Private Link" { class: pe }
+
+# ── peering ──────────────────────────────────────────────────────────────────
+sub_lz.rg_hub.vnet_hub <-> sub_prod.rg_prod.vnet_spoke: "VNet peering" { class: peering }
+
+# ── egress ───────────────────────────────────────────────────────────────────
+sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm -> sub_prod.rg_prod.natgw: "outbound" { class: egress }
+sub_prod.rg_prod.natgw -> right.external: "fixed IP · allowlisted" { class: egress }
+
+# ── DevOps ───────────────────────────────────────────────────────────────────
+actors.devs -> sub_lz.edge.devops: "commit · PR" { class: devops }
+sub_lz.edge.devops -> right.paas.acr: "build · push" { class: devops }
+sub_lz.edge.devops -> sub_prod.rg_prod.vnet_spoke.snet_web.aca: "Terraform deploy" { class: devops }
+
+# ── management, backup, security ─────────────────────────────────────────────
+sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm -> right.rsv: "daily full + 15-min log" { class: mgmt }
+sub_prod.rg_prod.vnet_spoke.snet_db.sqlvm -> right.rsv: "ASR replication" { class: mgmt }
+sub_prod.rg_prod.vnet_spoke.snet_web.aca -> right.law: "diagnostics" { class: mgmt }
+sub_lz.govern.defender -> sub_prod: "posture + threat detection" { class: mgmt }
+sub_lz.rg_hub.vnet_hub.snet_bastion.bastion -> sub_prod.rg_prod.vnet_spoke.snet_mw.hubvm: "RDP/SSH admin" { class: mgmt }

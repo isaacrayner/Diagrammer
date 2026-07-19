@@ -1,0 +1,25 @@
+...@../styles/azure.d2
+# diagram-type: component
+# evals/incomplete-legend.d2 — the legend omits classes the diagram uses.
+# Must report exactly R8-legend-incomplete (missing: devops, egress).
+# This file is a fixture: it is SUPPOSED to fail.
+
+title: |md
+  # Fixture — incomplete legend
+  Rev 1 · 2026-07-19 · fixture
+| { near: top-center; class: titleblock }
+
+legend: Legend {
+  near: bottom-left
+  class: legend
+  i1 -> i2: user / app inflow { class: ingress }
+}
+
+users:    Users             { class: svc; icon: ./icons/users.svg }
+app:      App Service       { class: svc; icon: ./icons/appservice.svg }
+pipeline: Azure DevOps      { class: svc; icon: ./icons/acr.svg }
+external: External Services { class: svc; icon: ./icons/internet.svg }
+
+users -> app: HTTPS 443 { class: ingress }
+pipeline -> app: deploy { class: devops }
+app -> external: "SMTP 587" { class: egress }

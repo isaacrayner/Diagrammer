@@ -1,0 +1,81 @@
+...@../../styles/azure.d2
+# diagram-type: component
+# Reference design — exercises the full flow vocabulary and the icon convention.
+# Render:  python bin/optimize.py designs/_example/example.d2
+
+title: "Example Ltd — Azure Target-State Architecture\nRev 1 · 2026-07-19 · Climb Global Services" {
+  near: top-center
+  class: titleblock
+}
+
+legend: Legend {
+  near: bottom-left
+  class: legend
+  direction: right
+  i1.class: legendkey;  i2.class: legendkey
+  s1.class: legendkey;  s2.class: legendkey
+  d1.class: legendkey;  d2.class: legendkey
+  e1.class: legendkey;  e2.class: legendkey
+  p1.class: legendkey;  p2.class: legendkey
+  v1.class: legendkey;  v2.class: legendkey
+  m1.class: legendkey;  m2.class: legendkey
+  i1 -> i2: user / app inflow     { class: ingress }
+  s1 -> s2: internal service call { class: sync }
+  d1 -> d2: DevOps / CI-CD        { class: devops }
+  e1 -> e2: internet egress       { class: egress }
+  p1 -> p2: private endpoint      { class: pe }
+  v1 -> v2: VNet peering          { class: peering }
+  m1 -> m2: management / backup   { class: mgmt }
+}
+
+users:    Users            { class: svc; icon: ./icons/users.svg }
+fd:       Front Door       { class: svc; icon: ./icons/frontdoor.svg }
+pipeline: Azure DevOps     { class: svc; icon: ./icons/acr.svg }
+external: External Services { class: svc; icon: ./icons/internet.svg }
+
+sub_work: "SUBSCRIPTION · Workload-Prod" { class: sub
+  rg_hub: "RG · rg-hub" { class: rg
+    vnet_hub: "hub-vnet 10.0.0.0/16" { class: vnet
+      snet_fw: "AzureFirewallSubnet 10.0.0.0/26" { class: subnet
+        fw: Azure Firewall { class: svc; icon: ./icons/firewall.svg }
+      }
+    }
+  }
+  rg_app: "RG · rg-app" { class: rg
+    vnet_spoke: "spoke-vnet 10.1.0.0/16" { class: vnet
+      snet_fe: "snet-agw 10.1.0.0/24" { class: subnet
+        agw: Application Gateway { class: svc; icon: ./icons/appgw.svg }
+      }
+      snet_app: "snet-app 10.1.1.0/24" { class: subnet
+        app: App Service { class: svc; icon: ./icons/appservice.svg }
+      }
+      snet_data: "snet-data 10.1.2.0/24" { class: subnet
+        sqlmi: SQL Managed Instance { class: svc; icon: ./icons/sqlmi.svg }
+      }
+    }
+  }
+}
+
+# PaaS reached over a private endpoint sits OUTSIDE the VNet (WAF: be accurate)
+kv:      Key Vault       { class: svc; icon: ./icons/keyvault.svg }
+storage: Storage Account { class: svc; icon: ./icons/storage.svg }
+mon:     Azure Monitor   { class: svc; icon: ./icons/monitor.svg }
+
+# inflow
+users -> fd: HTTPS 443 { class: ingress }
+fd -> sub_work.rg_app.vnet_spoke.snet_fe.agw: HTTPS { class: ingress }
+sub_work.rg_app.vnet_spoke.snet_fe.agw -> sub_work.rg_app.vnet_spoke.snet_app.app: HTTPS { class: ingress }
+
+# internal
+sub_work.rg_app.vnet_spoke.snet_app.app -> sub_work.rg_app.vnet_spoke.snet_data.sqlmi: TDS 1433 { class: sync }
+
+# private endpoints
+sub_work.rg_app.vnet_spoke.snet_app.app -> kv: "secrets · PE" { class: pe }
+sub_work.rg_app.vnet_spoke.snet_app.app -> storage: "blobs · PE" { class: pe }
+
+# peering, egress, devops, management
+sub_work.rg_hub.vnet_hub <-> sub_work.rg_app.vnet_spoke: VNet peering { class: peering }
+sub_work.rg_app.vnet_spoke.snet_app.app -> sub_work.rg_hub.vnet_hub.snet_fw.fw: "egress via firewall" { class: egress }
+sub_work.rg_hub.vnet_hub.snet_fw.fw -> external: "SMTP 587 · Graph API" { class: egress }
+pipeline -> sub_work.rg_app.vnet_spoke.snet_app.app: "deploy" { class: devops }
+sub_work.rg_app.vnet_spoke.snet_app.app -> mon: diagnostics { class: mgmt }
