@@ -89,9 +89,11 @@ considering:
    numbered list would most strongly evoke the Azure house look. This touches the D2
    schema and the converter, so it's a small feature, not a style tweak — flagged for
    a decision.
-2. **Boundary-type icons in container headers.** Azure often puts a small
-   subscription / resource-group / VNet icon beside the boundary's title. We use a
-   text title only. A header icon per container class would sharpen the match.
+2. **Boundary-type icons in container headers — done.** Each subscription,
+   resource group, VNet, and subnet now carries its official Azure icon in the
+   header (as Azure reference architectures do), locked as chrome so it can't be
+   dragged out of place. A logical `group` deliberately has none — it isn't an
+   Azure hierarchy level.
 3. **Segoe UI font — done.** Applied to the draw.io style-map in this change so text
    matches Microsoft's diagrams (draw.io falls back gracefully off-Windows).
 
@@ -99,11 +101,15 @@ considering:
 
 ## 5. What changed in this review
 
+- **`bin/build_manifest.py`**: added a `subnet` slug (official `Subnet` icon) so
+  every hierarchy level has a boundary icon available (73/73 slugs resolve).
 - **`bin/phase0_radical_to_drawio.py`**: applied `fontFamily=Segoe UI` across the
-  draw.io container, leaf, and edge styles, and regenerated `radical-systems.drawio`.
+  draw.io styles, and added **boundary icons** — the official subscription /
+  resource-group / VNet / subnet icon in each container header, indented clear of
+  the title and locked as chrome. Regenerated `radical-systems.drawio`.
 - Added this conformance record. No rule or palette value was changed — the existing
-  styling already conforms; this documents and verifies it against the live sources,
-  and adds the font to match Azure's typography.
+  styling already conforms; this documents/verifies it against the live sources and
+  adds the typography + boundary icons to match Azure's reference-architecture look.
 
 *Companion docs: `docs/azure-diagram-guidelines.md` (the sourced rules the contract
 enforces) and `docs/reference-review.md` (the hand-made house diagrams audited against

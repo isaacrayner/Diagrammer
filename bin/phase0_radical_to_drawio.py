@@ -43,6 +43,18 @@ CONTAINER_STYLE = {k: _FONT + v for k, v in CONTAINER_STYLE.items()}
 EDGE_STYLE = {k: _FONT + v for k, v in EDGE_STYLE.items()}
 LEAF_STYLE = LEAF_STYLE.replace("fontSize=11;", _FONT + "fontSize=11;")
 
+# ── boundary icons: the official Azure icon for each hierarchy level, shown small
+# in the container's header (as Azure reference architectures do). 'group' is a
+# logical grouping, not an Azure level, so it deliberately has none.
+BOUNDARY_ICON = {"sub": "subscription", "rg": "resourcegroup",
+                 "vnet": "vnet", "subnet": "subnet"}
+HDR_ICON_STYLE = ("shape=image;imageAspect=1;aspect=fixed;movable=0;resizable=0;"
+                  "rotatable=0;connectable=0;html=1;image=")
+# indent the title so it clears the header icon
+for _k in BOUNDARY_ICON:
+    CONTAINER_STYLE[_k] = (CONTAINER_STYLE[_k].replace("spacingLeft=12", "spacingLeft=36")
+                                              .replace("spacingLeft=10", "spacingLeft=36"))
+
 _icon_cache = {}
 def icon_uri(slug):
     if slug not in _icon_cache:
@@ -212,6 +224,12 @@ def emit(node, parent_id, path):
         f'        <mxCell id="{html.escape(fid)}" value="{L(node["label"])}" style="{style}" vertex="1" parent="{html.escape(parent_id)}">\n'
         f'          <mxGeometry x="{node["rx"]:.0f}" y="{node["ry"]:.0f}" width="{node["w"]:.0f}" height="{node["h"]:.0f}" as="geometry" />\n'
         f'        </mxCell>')
+    if not node["icon"] and node["cls"] in BOUNDARY_ICON:
+        cells.append(
+            f'        <mxCell id="{html.escape(fid)}.__hdr" value="" '
+            f'style="{HDR_ICON_STYLE}{icon_uri(BOUNDARY_ICON[node["cls"]])}" vertex="1" parent="{html.escape(fid)}">\n'
+            f'          <mxGeometry x="11" y="7" width="20" height="20" as="geometry" />\n'
+            f'        </mxCell>')
     for c in node["children"]:
         emit(c, fid, path + [node["id"]])
 
@@ -327,7 +345,13 @@ def draw(node):
         da = f' stroke-dasharray="{dash}"' if dash else ""
         svg.append(f'<rect x="{ax:.0f}" y="{ay:.0f}" width="{w:.0f}" height="{h:.0f}" rx="8" '
                    f'fill="{SVG_FILL[node["cls"]]}" stroke="{SVG_STROKE[node["cls"]]}" stroke-width="{SVG_SW[node["cls"]]}"{da}/>')
-        svg.append(f'<text x="{ax+12:.0f}" y="{ay+20:.0f}" font-size="{13 if node["cls"] in ("sub","rg","vnet") else 12}" '
+        tx = ax + 12
+        if node["cls"] in BOUNDARY_ICON:
+            with open(os.path.join(ICONS, BOUNDARY_ICON[node["cls"]] + ".svg"), "rb") as f:
+                huri = "data:image/svg+xml;base64," + base64.b64encode(f.read()).decode("ascii")
+            svg.append(f'<image x="{ax+10:.0f}" y="{ay+5:.0f}" width="18" height="18" href="{huri}"/>')
+            tx = ax + 34
+        svg.append(f'<text x="{tx:.0f}" y="{ay+19:.0f}" font-size="{13 if node["cls"] in ("sub","rg","vnet") else 12}" '
                    f'font-weight="bold" fill="{SVG_STROKE[node["cls"]]}">{svg_esc(node["label"])}</text>')
         for c in node["children"]:
             draw(c)

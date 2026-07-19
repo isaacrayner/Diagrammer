@@ -66,6 +66,7 @@ VOCAB = {
     "dms":              (["Database Migration Service", "DMS"], ["Azure-Database-Migration-Services"]),
     # networking / security
     "vnet":             (["Virtual Network", "VNet"], ["Virtual-Networks"]),
+    "subnet":           (["Subnet"], ["Subnet"]),
     "vnetgw":           (["VNet Gateway", "VPN Gateway"], ["Virtual-Network-Gateways"]),
     "expressroute":     (["ExpressRoute"], ["ExpressRoute-Circuits"]),
     "firewall":         (["Azure Firewall"], ["Firewalls"]),
