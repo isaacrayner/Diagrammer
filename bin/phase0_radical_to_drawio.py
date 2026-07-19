@@ -36,6 +36,13 @@ EDGE_STYLE = {
     "mgmt":    "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;dashPattern=3 3;strokeColor=#8661C5;strokeWidth=2;fontSize=10;fontColor=#8661C5;",
 }
 
+# Azure reference architectures use Segoe UI. Apply it everywhere so the look
+# matches Microsoft's own diagrams (draw.io falls back gracefully off-Windows).
+_FONT = "fontFamily=Segoe UI;"
+CONTAINER_STYLE = {k: _FONT + v for k, v in CONTAINER_STYLE.items()}
+EDGE_STYLE = {k: _FONT + v for k, v in EDGE_STYLE.items()}
+LEAF_STYLE = LEAF_STYLE.replace("fontSize=11;", _FONT + "fontSize=11;")
+
 _icon_cache = {}
 def icon_uri(slug):
     if slug not in _icon_cache:
